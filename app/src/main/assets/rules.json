@@ -7,6 +7,13 @@
       "label": "开屏广告·跳过按钮（全局）",
       "keywords": ["跳过", "跳過", "Skip", "跳过广告"],
       "matchMode": "contains"
+    },
+    {
+      "id": "builtin_confirm_global",
+      "type": "confirm",
+      "label": "跳过后·二次确认（全局）",
+      "keywords": ["坚持跳过", "放弃奖励", "仍然跳过", "确认放弃", "放弃金币", "放弃红包"],
+      "matchMode": "contains"
     }
   ],
   "apps": []

@@ -1,5 +1,6 @@
 package com.litejump.app.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -46,16 +47,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.litejump.app.R
+import com.litejump.app.engine.CaptureHub
+import com.litejump.app.engine.CaptureScheduler
+import com.litejump.app.engine.ClickLog
 import com.litejump.app.engine.SkipService
+import com.litejump.app.engine.Stats
 import com.litejump.app.rules.MatchMode
 import com.litejump.app.rules.Rule
 import com.litejump.app.rules.RuleRepository
 import com.litejump.app.rules.RuleType
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class AppInfo(val label: String, val packageName: String)
 
@@ -68,11 +78,23 @@ private fun loadInstalledApps(context: Context): List<AppInfo> {
         .sortedBy { it.label.lowercase() }
 }
 
-private fun RuleType.displayName() = when (this) {
-    RuleType.SPLASH -> "跳开屏"
-    RuleType.CONSENT -> "同意隐私"
-    RuleType.POPUP -> "关弹窗"
-}
+@Composable
+private fun RuleType.displayName(): String = stringResource(
+    when (this) {
+        RuleType.SPLASH -> R.string.type_splash
+        RuleType.CONSENT -> R.string.type_consent
+        RuleType.POPUP -> R.string.type_popup
+        RuleType.CONFIRM -> R.string.type_confirm
+    }
+)
+
+private fun formatSaved(seconds: Long, secUnit: String, minUnit: String): String =
+    if (seconds < 60) "$seconds $secUnit" else "${seconds / 60} $minUnit ${seconds % 60} $secUnit"
+
+private val logTimeFormat = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
+
+/** 「添加规则」弹窗的预填内容(来自取词结果) */
+private data class Prefill(val app: AppInfo?, val keywords: String)
 
 @Composable
 fun AppUi() {
@@ -82,10 +104,15 @@ fun AppUi() {
     val builtinOff by RuleRepository.builtinDisabled.collectAsState()
     val blacklist by RuleRepository.splashBlacklist.collectAsState()
     val custom by RuleRepository.customRules.collectAsState()
+    val logEntries by ClickLog.entries.collectAsState()
+    val stats by Stats.stats.collectAsState()
 
     var serviceOn by remember { mutableStateOf(SkipService.connected) }
     var showAddRule by remember { mutableStateOf(false) }
+    var addRulePrefill by remember { mutableStateOf<Prefill?>(null) }
     var showBlacklist by remember { mutableStateOf(false) }
+    var showCaptureIntro by remember { mutableStateOf(false) }
+    var captured by remember { mutableStateOf<CaptureHub.Result?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
 
@@ -97,11 +124,14 @@ fun AppUi() {
         }
     }
 
-    // 从系统设置页返回时刷新服务运行状态
+    // 回到前台: 刷新服务状态, 消费取词结果
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) serviceOn = SkipService.connected
+            if (event == Lifecycle.Event.ON_RESUME) {
+                serviceOn = SkipService.connected
+                captured = CaptureHub.consume()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -116,7 +146,7 @@ fun AppUi() {
                     it.write(RuleRepository.exportJson().toByteArray())
                 }
             }.isSuccess
-            message = if (ok) "规则已导出" else "导出失败"
+            message = context.getString(if (ok) R.string.msg_exported else R.string.msg_export_failed)
         }
     }
     val importLauncher = rememberLauncherForActivityResult(
@@ -128,9 +158,9 @@ fun AppUi() {
             }.getOrNull()
             val n = text?.let { runCatching { RuleRepository.importJson(it) }.getOrNull() }
             message = when {
-                n == null -> "导入失败: 文件格式不认识"
-                n == 0 -> "文件里没有可用规则"
-                else -> "已导入 $n 条规则"
+                n == null -> context.getString(R.string.msg_import_failed)
+                n == 0 -> context.getString(R.string.msg_import_none)
+                else -> context.getString(R.string.msg_imported, n)
             }
         }
     }
@@ -142,9 +172,14 @@ fun AppUi() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("轻跳", style = MaterialTheme.typography.headlineMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { RuleRepository.setOnboarded(false) }) {
+                Text(stringResource(R.string.usage_guide))
+            }
+        }
         Text(
-            "自动跳过开屏广告与弹窗 · 无网络权限",
+            stringResource(R.string.tagline),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline,
         )
@@ -155,25 +190,24 @@ fun AppUi() {
 
         message?.let {
             Card {
-                Text(it, Modifier.fillMaxWidth().padding(12.dp), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    it,
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
 
+        StatsCard(stats, onClear = { Stats.reset(context) })
+
         Card {
             Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
-                Text("内置规则", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.builtin_rules), style = MaterialTheme.typography.titleMedium)
                 (builtin.global + builtin.apps).forEach { rule ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(rule.label ?: rule.id, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "${rule.type.displayName()} · ${rule.packageName ?: "全局"} · ${rule.keywords.joinToString("/")}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
+                            RuleSubtitle(rule)
                         }
                         Switch(
                             checked = rule.id !in builtinOff,
@@ -188,32 +222,33 @@ fun AppUi() {
             Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("开屏跳过排除名单", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.splash_blacklist), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            if (blacklist.isEmpty()) "全局跳过对所有 App 生效"
-                            else "已排除 ${blacklist.size} 个 App",
+                            if (blacklist.isEmpty()) stringResource(R.string.blacklist_empty)
+                            else stringResource(R.string.blacklist_count, blacklist.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
                     }
-                    OutlinedButton(onClick = { showBlacklist = true }) { Text("管理") }
+                    OutlinedButton(onClick = { showBlacklist = true }) { Text(stringResource(R.string.manage)) }
                 }
             }
         }
 
         Card {
             Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("我的规则", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.my_rules), style = MaterialTheme.typography.titleMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { showAddRule = true }) {
                         Icon(Icons.Filled.Add, contentDescription = null)
                         Spacer(Modifier.padding(2.dp))
-                        Text("添加")
+                        Text(stringResource(R.string.add))
                     }
+                    OutlinedButton(onClick = { showCaptureIntro = true }) { Text(stringResource(R.string.capture)) }
                 }
                 if (custom.isEmpty()) {
                     Text(
-                        "还没有自定义规则。可以给指定 App 添加\"同意/关闭\"按钮规则。",
+                        stringResource(R.string.my_rules_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                     )
@@ -222,31 +257,29 @@ fun AppUi() {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(rule.label ?: rule.packageName ?: rule.id, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "${rule.type.displayName()} · ${rule.packageName ?: "全局"} · ${rule.keywords.joinToString("/")}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
+                            RuleSubtitle(rule)
                         }
                         IconButton(onClick = { RuleRepository.removeCustom(rule.id) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "删除")
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
                         }
                     }
                 }
             }
         }
 
+        ClickLogCard(logEntries, apps, onClear = { ClickLog.clear(context) })
+
         Card {
             Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
-                Text("规则备份", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.backup), style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exportLauncher.launch("litejump-rules.json") }) { Text("导出") }
+                    OutlinedButton(onClick = { exportLauncher.launch("litejump-rules.json") }) { Text(stringResource(R.string.export_rules)) }
                     OutlinedButton(onClick = {
                         importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
-                    }) { Text("导入") }
+                    }) { Text(stringResource(R.string.import_rules)) }
                 }
                 Text(
-                    "规则只保存在本机, 导入导出走系统文件选择器, 不需要存储权限。",
+                    stringResource(R.string.backup_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                 )
@@ -254,26 +287,84 @@ fun AppUi() {
         }
 
         Text(
-            "本应用仅供学习交流, 请遵守所在地区法律法规。" +
-                "应用无网络权限, 不上传任何数据; 无障碍内容仅在本机内存中瞬时处理。",
+            stringResource(R.string.disclaimer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline,
         )
     }
 
     if (showAddRule) {
-        AddRuleDialog(apps = apps, onDismiss = { showAddRule = false })
+        AddRuleDialog(apps = apps, prefill = addRulePrefill, onDismiss = { showAddRule = false })
     }
     if (showBlacklist) {
         AppPickerDialog(
-            title = "排除的 App",
-            hint = "勾选后这些 App 不做全局开屏跳过",
+            title = stringResource(R.string.blacklist_dialog_title),
+            hint = stringResource(R.string.blacklist_dialog_hint),
             apps = apps,
             selected = blacklist,
             onToggle = { RuleRepository.setSplashBlocked(it.packageName, it.packageName !in blacklist) },
             onDismiss = { showBlacklist = false },
         )
     }
+    if (showCaptureIntro) {
+        AlertDialog(
+            onDismissRequest = { showCaptureIntro = false },
+            title = { Text(stringResource(R.string.capture_dlg_title)) },
+            text = {
+                if (!serviceOn) Text(stringResource(R.string.need_accessibility_first))
+                else Text(stringResource(R.string.capture_dlg_steps))
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = serviceOn,
+                    onClick = {
+                        showCaptureIntro = false
+                        val started = CaptureScheduler.start(SkipService.instance)
+                        if (started) (context as? Activity)?.moveTaskToBack(true)
+                        else message = context.getString(R.string.need_accessibility_first)
+                    },
+                ) { Text(stringResource(R.string.capture_start)) }
+            },
+            dismissButton = { TextButton(onClick = { showCaptureIntro = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    captured?.let { result ->
+        CaptureResultDialog(
+            result = result,
+            apps = apps,
+            onUse = { prefill ->
+                addRulePrefill = prefill
+                showAddRule = true
+                captured = null
+            },
+            onDismiss = { captured = null },
+        )
+    }
+}
+
+@Composable
+private fun RuleSubtitle(rule: Rule) {
+    val extra = buildList {
+        rule.viewId?.let { add(it) }
+        rule.activityName?.let { add(it.substringAfterLast('.')) }
+    }
+    Text(
+        buildString {
+            append(rule.type.displayName())
+            append(" · ")
+            append(rule.packageName ?: stringResource(R.string.label_global_rule))
+            if (rule.keywords.isNotEmpty()) {
+                append(" · ")
+                append(rule.keywords.joinToString("/"))
+            }
+            if (extra.isNotEmpty()) {
+                append(" · ")
+                append(extra.joinToString("/"))
+            }
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.outline,
+    )
 }
 
 @Composable
@@ -287,9 +378,9 @@ private fun ServiceCard(
         Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("总开关", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.master_switch), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (master) "自动跳过已启用" else "已暂停",
+                        stringResource(if (master) R.string.master_on else R.string.master_off),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                     )
@@ -298,45 +389,100 @@ private fun ServiceCard(
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (serviceOn) "● 无障碍服务运行中" else "○ 无障碍服务未开启",
+                    stringResource(if (serviceOn) R.string.service_on else R.string.service_off),
                     Modifier.weight(1f),
                     color = if (serviceOn) Color(0xFF16A34A) else MaterialTheme.colorScheme.error,
                 )
-                if (!serviceOn) Button(onClick = onOpenSettings) { Text("去开启") }
+                if (!serviceOn) Button(onClick = onOpenSettings) { Text(stringResource(R.string.open_accessibility)) }
             }
         }
     }
 }
 
 @Composable
-private fun AddRuleDialog(apps: List<AppInfo>, onDismiss: () -> Unit) {
-    var app by remember { mutableStateOf<AppInfo?>(null) }
+private fun StatsCard(stats: Stats.Snapshot, onClear: () -> Unit) {
+    Card {
+        Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.stats_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClear) { Text(stringResource(R.string.clear)) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(stringResource(R.string.stats_total, stats.total))
+                Text(stringResource(R.string.stats_today, stats.today))
+            }
+            val sec = stringResource(R.string.unit_seconds)
+            val min = stringResource(R.string.unit_minutes)
+            Text(
+                stringResource(R.string.stats_saved, formatSaved(stats.savedSeconds, sec, min)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClickLogCard(entries: List<ClickLog.Entry>, apps: List<AppInfo>, onClear: () -> Unit) {
+    Card {
+        Column(Modifier.padding(16.dp), Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.click_log_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClear) { Text(stringResource(R.string.clear)) }
+            }
+            if (entries.isEmpty()) {
+                Text(
+                    stringResource(R.string.click_log_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+            val labelMap = remember(apps) { apps.associate { it.packageName to it.label } }
+            entries.take(8).forEach { entry ->
+                Text(
+                    buildString {
+                        append(logTimeFormat.format(Date(entry.time)))
+                        append(" · ")
+                        append(labelMap[entry.packageName] ?: entry.packageName)
+                        append(" · ")
+                        append(entry.text)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddRuleDialog(apps: List<AppInfo>, prefill: Prefill?, onDismiss: () -> Unit) {
+    var app by remember { mutableStateOf(prefill?.app) }
     var type by remember { mutableStateOf(RuleType.SPLASH) }
-    var keywords by remember { mutableStateOf("") }
+    var keywords by remember { mutableStateOf(prefill?.keywords ?: "") }
+    var viewId by remember { mutableStateOf("") }
     var equalsMode by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
 
     val parsedKeywords = keywords.split(',', '，', '、', ' ')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
-    val needsApp = type != RuleType.SPLASH
-    val valid = parsedKeywords.isNotEmpty() && (!needsApp || app != null)
+    val trimmedViewId = viewId.trim().takeIf { it.isNotEmpty() }
+    val needsApp = type == RuleType.CONSENT || type == RuleType.POPUP
+    val valid = (parsedKeywords.isNotEmpty() || trimmedViewId != null) && (!needsApp || app != null)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("添加规则") },
+        title = { Text(stringResource(R.string.add_rule_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { picking = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                OutlinedButton(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         app?.label
-                            ?: if (needsApp) "选择应用(必选)" else "限定应用(可选, 不选=全局)"
+                            ?: if (needsApp) stringResource(R.string.pick_app_required) else stringResource(R.string.pick_app_optional)
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilterChip(
                         selected = type == RuleType.SPLASH,
                         onClick = { type = RuleType.SPLASH },
@@ -352,25 +498,38 @@ private fun AddRuleDialog(apps: List<AppInfo>, onDismiss: () -> Unit) {
                         onClick = { type = RuleType.POPUP },
                         label = { Text(RuleType.POPUP.displayName()) },
                     )
+                    FilterChip(
+                        selected = type == RuleType.CONFIRM,
+                        onClick = { type = RuleType.CONFIRM },
+                        label = { Text(RuleType.CONFIRM.displayName()) },
+                    )
                 }
                 OutlinedTextField(
                     value = keywords,
                     onValueChange = { keywords = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("按钮文字(逗号分隔)") },
-                    supportingText = { Text("例: 同意, 同意并继续") },
+                    label = { Text(stringResource(R.string.keywords_label)) },
+                    supportingText = { Text(stringResource(R.string.keywords_hint)) },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = viewId,
+                    onValueChange = { viewId = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.viewid_label)) },
+                    supportingText = { Text(stringResource(R.string.viewid_hint)) },
                     singleLine = true,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = !equalsMode,
                         onClick = { equalsMode = false },
-                        label = { Text("包含匹配") },
+                        label = { Text(stringResource(R.string.match_contains)) },
                     )
                     FilterChip(
                         selected = equalsMode,
                         onClick = { equalsMode = true },
-                        label = { Text("完全相等") },
+                        label = { Text(stringResource(R.string.match_equals)) },
                     )
                 }
             }
@@ -386,19 +545,20 @@ private fun AddRuleDialog(apps: List<AppInfo>, onDismiss: () -> Unit) {
                             keywords = parsedKeywords,
                             matchMode = if (equalsMode) MatchMode.EQUALS else MatchMode.CONTAINS,
                             packageName = app?.packageName,
-                            label = app?.label ?: "全局规则",
+                            label = app?.label,
+                            viewId = trimmedViewId,
                         )
                     )
                     onDismiss()
                 },
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 
     if (picking) {
         AppPickerDialog(
-            title = "选择应用",
+            title = stringResource(R.string.pick_app_required),
             hint = null,
             apps = apps,
             selected = app?.packageName?.let { setOf(it) } ?: emptySet(),
@@ -409,6 +569,65 @@ private fun AddRuleDialog(apps: List<AppInfo>, onDismiss: () -> Unit) {
             onDismiss = { picking = false },
         )
     }
+}
+
+@Composable
+private fun CaptureResultDialog(
+    result: CaptureHub.Result,
+    apps: List<AppInfo>,
+    onUse: (Prefill) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val selected = remember { mutableStateOf(setOf<Int>()) }
+    val app = apps.find { it.packageName == result.packageName } ?: AppInfo(result.packageName, result.packageName)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.capture_result_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.capture_result_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+                Text(app.label, style = MaterialTheme.typography.titleSmall)
+                LazyColumn(Modifier.height(320.dp)) {
+                    items(result.items.size) { index ->
+                        val item = result.items[index]
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selected.value =
+                                        if (index in selected.value) selected.value - index
+                                        else selected.value + index
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(item.text, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                item.viewId?.let {
+                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
+                                }
+                            }
+                            Checkbox(checked = index in selected.value, onCheckedChange = null)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = selected.value.isNotEmpty(),
+                onClick = {
+                    val keywords = selected.value.sorted().mapNotNull { result.items.getOrNull(it)?.text }
+                    onUse(Prefill(app, keywords.joinToString(", ")))
+                },
+            ) { Text(stringResource(R.string.done)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
@@ -433,7 +652,7 @@ private fun AppPickerDialog(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("搜索") },
+                    label = { Text(stringResource(R.string.search)) },
                     singleLine = true,
                 )
                 LazyColumn(Modifier.height(360.dp)) {
@@ -462,6 +681,6 @@ private fun AppPickerDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("完成") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
     )
 }

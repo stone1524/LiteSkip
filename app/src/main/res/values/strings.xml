@@ -3,4 +3,98 @@
     <string name="app_name">轻跳</string>
     <string name="service_label">轻跳 · 自动跳过服务</string>
     <string name="service_description">轻跳使用无障碍服务监测屏幕上的「跳过 / 同意 / 关闭」按钮并自动点击，帮你跳过开屏广告和弹窗。服务不读取你的输入内容；本应用无网络权限，不上传任何数据。</string>
+
+    <string name="tagline">自动跳过开屏广告与弹窗 · 无网络权限</string>
+    <string name="master_switch">总开关</string>
+    <string name="master_on">自动跳过已启用</string>
+    <string name="master_off">已暂停</string>
+    <string name="service_on">● 无障碍服务运行中</string>
+    <string name="service_off">○ 无障碍服务未开启</string>
+    <string name="open_accessibility">去开启</string>
+    <string name="usage_guide">使用指南</string>
+
+    <string name="stats_title">统计</string>
+    <string name="stats_total">累计 %1$d 次</string>
+    <string name="stats_today">今日 %1$d 次</string>
+    <string name="stats_saved">≈ 帮你省去 %1$s 手动操作</string>
+    <string name="unit_seconds">秒</string>
+    <string name="unit_minutes">分钟</string>
+    <string name="clear">清空</string>
+
+    <string name="builtin_rules">内置规则</string>
+    <string name="splash_blacklist">开屏跳过排除名单</string>
+    <string name="blacklist_empty">全局跳过对所有 App 生效</string>
+    <string name="blacklist_count">已排除 %1$d 个 App</string>
+    <string name="manage">管理</string>
+
+    <string name="my_rules">我的规则</string>
+    <string name="add">添加</string>
+    <string name="capture">屏幕取词</string>
+    <string name="my_rules_empty">还没有自定义规则。点「添加」手动创建，或用「屏幕取词」从目标界面直接抓取按钮文字。</string>
+    <string name="delete">删除</string>
+
+    <string name="click_log_title">自动点击日志</string>
+    <string name="click_log_empty">暂无记录。发生自动点击后会出现在这里。</string>
+
+    <string name="backup">规则备份</string>
+    <string name="export_rules">导出</string>
+    <string name="import_rules">导入</string>
+    <string name="backup_hint">规则只保存在本机，导入导出走系统文件选择器，不需要存储权限。</string>
+
+    <string name="disclaimer">本应用仅供学习交流，请遵守所在地区法律法规。应用无网络权限，不上传任何数据；无障碍内容仅在本机内存中瞬时处理。</string>
+
+    <string name="add_rule_title">添加规则</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="search">搜索</string>
+    <string name="done">完成</string>
+    <string name="pick_app_required">选择应用（必选）</string>
+    <string name="pick_app_optional">限定应用（可选，不选=全局）</string>
+    <string name="type_splash">跳开屏</string>
+    <string name="type_consent">同意隐私</string>
+    <string name="type_popup">关弹窗</string>
+    <string name="type_confirm">二次确认</string>
+    <string name="keywords_label">按钮文字（逗号分隔）</string>
+    <string name="keywords_hint">例：同意, 同意并继续</string>
+    <string name="match_contains">包含匹配</string>
+    <string name="match_equals">完全相等</string>
+    <string name="viewid_label">控件ID（可选，进阶）</string>
+    <string name="viewid_hint">如 com.x:id/btn_skip 或 btn_skip</string>
+    <string name="label_global_rule">全局规则</string>
+
+    <string name="capture_dlg_title">屏幕取词</string>
+    <string name="capture_dlg_steps">点「开始取词」后应用会退到后台并开始 12 秒倒计时：立即切到目标 App，把要自动点击的按钮摆好。倒计时结束自动抓取当前界面的可点击文字，之后回到轻跳勾选生成规则。</string>
+    <string name="capture_start">开始取词</string>
+    <string name="need_accessibility_first">需要先开启无障碍服务才能取词。</string>
+    <string name="capture_result_title">取词结果</string>
+    <string name="capture_result_hint">勾选要作为关键词的文字（包名已锁定为抓取时的应用）</string>
+
+    <string name="blacklist_dialog_title">排除的 App</string>
+    <string name="blacklist_dialog_hint">勾选后这些 App 不做全局开屏跳过</string>
+
+    <string name="onboarding_title">欢迎使用轻跳</string>
+    <string name="ob1_title">① 开启无障碍服务</string>
+    <string name="ob1_body">首页点「去开启」，在系统设置里打开「轻跳 · 自动跳过服务」，弹窗选「允许」。这是全部功能的前提。</string>
+    <string name="ob2_title">② 设置后台保活</string>
+    <string name="ob2_body">小米 / 澎湃OS 用户按「使用指南」里的保活四步设置：自启动、省电策略无限制、任务卡加锁、无障碍快捷方式。</string>
+    <string name="ob3_title">③ 没覆盖到的弹窗自己加规则</string>
+    <string name="ob3_body">「我的规则 → 屏幕取词」能直接抓取目标界面的按钮文字生成规则；也可以手动添加。内置规则负责最常见的开屏广告。</string>
+    <string name="ob_done">完成，开始使用</string>
+
+    <string name="toast_service_on">轻跳服务已开启</string>
+    <string name="toast_skipped_splash">已跳过开屏广告</string>
+    <string name="toast_auto_consent">已自动同意隐私弹窗</string>
+    <string name="toast_closed_popup">已关闭弹窗</string>
+    <string name="toast_auto_confirm">已自动确认跳过</string>
+    <string name="toast_capture_no_window">没有可抓取的窗口</string>
+    <string name="toast_capture_self">抓到的是轻跳自己，请在倒计时内停在目标界面</string>
+    <string name="toast_capture_empty">这个界面没有可点击的文字按钮</string>
+    <string name="toast_capture_done">已捕获 %1$d 个控件文字，回到轻跳完成规则</string>
+    <string name="toast_capture_countdown">取词 %1$d…</string>
+
+    <string name="msg_exported">规则已导出</string>
+    <string name="msg_export_failed">导出失败</string>
+    <string name="msg_import_failed">导入失败：文件格式不认识</string>
+    <string name="msg_import_none">文件里没有可用规则</string>
+    <string name="msg_imported">已导入 %1$d 条规则</string>
 </resources>

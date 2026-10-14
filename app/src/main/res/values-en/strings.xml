@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LiteSkip</string>
+    <string name="service_label">LiteSkip · Auto Skip Service</string>
+    <string name="service_description">LiteSkip uses the accessibility service to watch for "Skip / Agree / Close" buttons on screen and taps them for you, skipping splash ads and popups. It never reads your typed input; the app has no Internet permission and uploads nothing.</string>
+
+    <string name="tagline">Auto-skip splash ads &amp; popups · No Internet permission</string>
+    <string name="master_switch">Master switch</string>
+    <string name="master_on">Auto skip enabled</string>
+    <string name="master_off">Paused</string>
+    <string name="service_on">● Accessibility service running</string>
+    <string name="service_off">○ Accessibility service off</string>
+    <string name="open_accessibility">Enable</string>
+    <string name="usage_guide">User guide</string>
+
+    <string name="stats_title">Statistics</string>
+    <string name="stats_total">%1$d total</string>
+    <string name="stats_today">%1$d today</string>
+    <string name="stats_saved">≈ saved %1$s of manual taps</string>
+    <string name="unit_seconds">s</string>
+    <string name="unit_minutes">min</string>
+    <string name="clear">Clear</string>
+
+    <string name="builtin_rules">Built-in rules</string>
+    <string name="splash_blacklist">Splash-skip exclusions</string>
+    <string name="blacklist_empty">Global skip applies to all apps</string>
+    <string name="blacklist_count">%1$d apps excluded</string>
+    <string name="manage">Manage</string>
+
+    <string name="my_rules">My rules</string>
+    <string name="add">Add</string>
+    <string name="capture">Screen picker</string>
+    <string name="my_rules_empty">No custom rules yet. Tap "Add" to create one, or use "Screen picker" to grab button labels straight from the target screen.</string>
+    <string name="delete">Delete</string>
+
+    <string name="click_log_title">Auto-click log</string>
+    <string name="click_log_empty">Nothing yet. Auto clicks will show up here.</string>
+
+    <string name="backup">Rule backup</string>
+    <string name="export_rules">Export</string>
+    <string name="import_rules">Import</string>
+    <string name="backup_hint">Rules stay on this device only. Import/export goes through the system file picker — no storage permission needed.</string>
+
+    <string name="disclaimer">For study and personal use only; comply with the laws of your region. The app has no Internet permission and uploads nothing; accessibility content is processed transiently in memory.</string>
+
+    <string name="add_rule_title">Add rule</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="search">Search</string>
+    <string name="done">Done</string>
+    <string name="pick_app_required">Choose app (required)</string>
+    <string name="pick_app_optional">Limit to app (optional, empty = global)</string>
+    <string name="type_splash">Splash</string>
+    <string name="type_consent">Consent</string>
+    <string name="type_popup">Popup</string>
+    <string name="type_confirm">Confirm</string>
+    <string name="keywords_label">Button labels (comma separated)</string>
+    <string name="keywords_hint">e.g. Agree, Accept all</string>
+    <string name="match_contains">Contains</string>
+    <string name="match_equals">Equals</string>
+    <string name="viewid_label">View ID (optional, advanced)</string>
+    <string name="viewid_hint">e.g. com.x:id/btn_skip or btn_skip</string>
+    <string name="label_global_rule">Global rule</string>
+
+    <string name="capture_dlg_title">Screen picker</string>
+    <string name="capture_dlg_steps">Tap "Start" and the app goes to the background with a 12-second countdown: switch to the target app and arrange the popup. When time is up the current screen is captured — come back to LiteSkip and tick the labels to build a rule.</string>
+    <string name="capture_start">Start</string>
+    <string name="need_accessibility_first">Enable the accessibility service first.</string>
+    <string name="capture_result_title">Captured labels</string>
+    <string name="capture_result_hint">Tick labels to use as keywords (package is locked to the captured app)</string>
+
+    <string name="blacklist_dialog_title">Excluded apps</string>
+    <string name="blacklist_dialog_hint">Excluded apps are not auto-skipped on splash screens</string>
+
+    <string name="onboarding_title">Welcome to LiteSkip</string>
+    <string name="ob1_title">1. Enable the accessibility service</string>
+    <string name="ob1_body">Tap "Enable" on the home screen, turn on "LiteSkip · Auto Skip Service" in system settings and confirm. This is required for everything.</string>
+    <string name="ob2_title">2. Keep it alive</string>
+    <string name="ob2_body">On Xiaomi/HyperOS follow the keep-alive steps in the guide: autostart, unrestricted battery, lock the task card, accessibility shortcut.</string>
+    <string name="ob3_title">3. Add rules for uncovered popups</string>
+    <string name="ob3_body">"My rules → Screen picker" grabs button labels from the target screen; or add rules manually. Built-in rules cover the most common splash ads.</string>
+    <string name="ob_done">Done, let\'s go</string>
+
+    <string name="toast_service_on">LiteSkip service enabled</string>
+    <string name="toast_skipped_splash">Splash ad skipped</string>
+    <string name="toast_auto_consent">Privacy dialog accepted</string>
+    <string name="toast_closed_popup">Popup closed</string>
+    <string name="toast_auto_confirm">Skip confirmed</string>
+    <string name="toast_capture_no_window">No window to capture</string>
+    <string name="toast_capture_self">Captured LiteSkip itself — stay on the target screen during the countdown</string>
+    <string name="toast_capture_empty">No tappable text found on this screen</string>
+    <string name="toast_capture_done">Captured %1$d labels — reopen LiteSkip to build the rule</string>
+    <string name="toast_capture_countdown">Picking in %1$d…</string>
+
+    <string name="msg_exported">Rules exported</string>
+    <string name="msg_export_failed">Export failed</string>
+    <string name="msg_import_failed">Import failed: unknown file format</string>
+    <string name="msg_import_none">No usable rules in file</string>
+    <string name="msg_imported">Imported %1$d rules</string>
+</resources>
