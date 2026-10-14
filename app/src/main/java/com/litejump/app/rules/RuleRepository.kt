@@ -31,6 +31,7 @@ object RuleRepository {
     private val KEY_SPLASH_BLACKLIST = stringSetPreferencesKey("splash_blacklist")
     private val KEY_CUSTOM = stringPreferencesKey("custom_rules_json")
     private val KEY_ONBOARDED = booleanPreferencesKey("onboarding_done")
+    private val KEY_TOAST_ENABLED = booleanPreferencesKey("toast_enabled")
 
     private val _masterEnabled = MutableStateFlow(true)
     private val _builtinDisabled = MutableStateFlow<Set<String>>(emptySet())
@@ -38,6 +39,7 @@ object RuleRepository {
     private val _customRules = MutableStateFlow<List<Rule>>(emptyList())
     private val _builtinRules = MutableStateFlow(RuleFile())
     private val _onboarded = MutableStateFlow(false)
+    private val _toastEnabled = MutableStateFlow(true)
 
     val masterEnabled: StateFlow<Boolean> = _masterEnabled
     val builtinDisabled: StateFlow<Set<String>> = _builtinDisabled
@@ -45,6 +47,7 @@ object RuleRepository {
     val customRules: StateFlow<List<Rule>> = _customRules
     val builtinRules: StateFlow<RuleFile> = _builtinRules
     val onboarded: StateFlow<Boolean> = _onboarded
+    val toastEnabled: StateFlow<Boolean> = _toastEnabled
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -56,6 +59,7 @@ object RuleRepository {
                 _splashBlacklist.value = p[KEY_SPLASH_BLACKLIST] ?: emptySet()
                 _customRules.value = p[KEY_CUSTOM]?.let(::decodeRules) ?: emptyList()
                 _onboarded.value = p[KEY_ONBOARDED] ?: false
+                _toastEnabled.value = p[KEY_TOAST_ENABLED] ?: true
             }
         }
     }
@@ -76,6 +80,7 @@ object RuleRepository {
         builtinDisabled = _builtinDisabled.value,
         splashBlacklist = _splashBlacklist.value,
         customRules = _customRules.value,
+        toastEnabled = _toastEnabled.value,
     )
 
     data class Snapshot(
@@ -84,6 +89,7 @@ object RuleRepository {
         val builtinDisabled: Set<String>,
         val splashBlacklist: Set<String>,
         val customRules: List<Rule>,
+        val toastEnabled: Boolean = true,
     ) {
         /** 给定包名当前生效的全部规则 */
         fun rulesFor(packageName: String): List<Rule> {
@@ -109,6 +115,10 @@ object RuleRepository {
 
     fun setOnboarded(done: Boolean) = scope.launch {
         appContext.appDataStore.edit { it[KEY_ONBOARDED] = done }
+    }
+
+    fun setToastEnabled(enabled: Boolean) = scope.launch {
+        appContext.appDataStore.edit { it[KEY_TOAST_ENABLED] = enabled }
     }
 
     fun setBuiltinEnabled(id: String, enabled: Boolean) = scope.launch {

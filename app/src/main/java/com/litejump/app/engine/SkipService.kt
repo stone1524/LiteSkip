@@ -90,15 +90,19 @@ class SkipService : AccessibilityService() {
         val now = SystemClock.elapsedRealtime()
         val hunting = now < huntUntil
 
-        // 活动窗口 + 所有应用窗口 (对话框型弹窗在独立窗口里)
-        val roots = linkedMapOf<String, android.view.accessibility.AccessibilityNodeInfo>()
-        rootInActiveWindow?.let { r -> r.packageName?.let { roots[it.toString()] = r } }
+        // 活动窗口 + 所有应用窗口 (对话框型弹窗在独立窗口里)。
+        // 按 root 实例去重而不是包名 —— 同一包名的主窗口和对话框窗口都要扫。
+        val roots = mutableListOf<Pair<String, android.view.accessibility.AccessibilityNodeInfo>>()
+        val seenRoots = HashSet<android.view.accessibility.AccessibilityNodeInfo>()
+        rootInActiveWindow?.let { r ->
+            r.packageName?.let { p -> if (seenRoots.add(r)) roots += p.toString() to r }
+        }
         try {
             windows.orEmpty()
                 .filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
                 .forEach { w ->
                     w.root?.let { r ->
-                        r.packageName?.let { p -> roots.putIfAbsent(p.toString(), r) }
+                        r.packageName?.let { p -> if (seenRoots.add(r)) roots += p.toString() to r }
                     }
                 }
         } catch (_: Exception) {
@@ -129,12 +133,13 @@ class SkipService : AccessibilityService() {
             withContext(Dispatchers.Main) {
                 for ((pkg, target) in hits) {
                     val clickAt = SystemClock.elapsedRealtime()
-                    val key = "${target.rule.id}|${target.matchedText}|${target.bounds}"
+                    // 冷却键用按钮中心坐标: 内容微移 1px 不会让冷却失效
+                    val key = "${target.rule.id}|${target.matchedText}|${target.bounds.centerX()},${target.bounds.centerY()}"
                     if (clickAt - (lastClick[key] ?: 0L) < CLICK_COOLDOWN_MS) continue
                     lastClick[key] = clickAt
                     if (!Matcher.click(this@SkipService, target)) continue
 
-                    toastPublic(feedback(target.rule.type))
+                    if (snapshot.toastEnabled) toastPublic(feedback(target.rule.type))
                     ClickLog.record(applicationContext, pkg, target.rule.type, target.matchedText)
                     Stats.record(applicationContext, target.rule.type)
                     if (target.rule.type == RuleType.SPLASH) {

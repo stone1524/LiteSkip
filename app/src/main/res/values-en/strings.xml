@@ -12,6 +12,9 @@
     <string name="service_off">○ Accessibility service off</string>
     <string name="open_accessibility">Enable</string>
     <string name="usage_guide">User guide</string>
+    <string name="toast_toggle">Click toast</string>
+    <string name="toast_toggle_hint">Show a toast when a click lands</string>
+    <string name="tile_label">LiteSkip toggle</string>
 
     <string name="stats_title">Statistics</string>
     <string name="stats_total">%1$d total</string>

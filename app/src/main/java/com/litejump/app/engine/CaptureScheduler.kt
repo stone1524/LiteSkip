@@ -25,14 +25,17 @@ object CaptureScheduler {
         job?.cancel()
         job = scope.launch {
             for (left in seconds downTo 1) {
+                // 倒计时期间服务被系统杀掉就放弃取词, 不在已销毁的服务上调 Toast
+                val svc = SkipService.instance ?: return@launch
                 if (left <= 3) {
                     withContext(Dispatchers.Main) {
-                        service.toastPublic(service.getString(com.litejump.app.R.string.toast_capture_countdown, left))
+                        svc.toastPublic(svc.getString(com.litejump.app.R.string.toast_capture_countdown, left))
                     }
                 }
                 delay(1000)
             }
-            withContext(Dispatchers.Main) { service.captureNow() }
+            val svc = SkipService.instance ?: return@launch
+            withContext(Dispatchers.Main) { svc.captureNow() }
         }
         return true
     }

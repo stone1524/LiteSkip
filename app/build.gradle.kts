@@ -21,8 +21,8 @@ android {
         applicationId = "com.litejump.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     signingConfigs {
@@ -37,6 +37,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // debug 包用独立应用ID, 可与正式版共存对照测试
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

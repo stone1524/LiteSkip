@@ -12,6 +12,9 @@
     <string name="service_off">○ 无障碍服务未开启</string>
     <string name="open_accessibility">去开启</string>
     <string name="usage_guide">使用指南</string>
+    <string name="toast_toggle">点击提示</string>
+    <string name="toast_toggle_hint">自动点击成功时弹 Toast 提示</string>
+    <string name="tile_label">轻跳开关</string>
 
     <string name="stats_title">统计</string>
     <string name="stats_total">累计 %1$d 次</string>

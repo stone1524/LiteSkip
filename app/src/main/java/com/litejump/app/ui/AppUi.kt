@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -94,7 +97,7 @@ private fun formatSaved(seconds: Long, secUnit: String, minUnit: String): String
 private val logTimeFormat = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
 
 /** 「添加规则」弹窗的预填内容(来自取词结果) */
-private data class Prefill(val app: AppInfo?, val keywords: String)
+private data class Prefill(val app: AppInfo?, val keywords: String, val viewId: String? = null)
 
 @Composable
 fun AppUi() {
@@ -106,6 +109,7 @@ fun AppUi() {
     val custom by RuleRepository.customRules.collectAsState()
     val logEntries by ClickLog.entries.collectAsState()
     val stats by Stats.stats.collectAsState()
+    val toastOn by RuleRepository.toastEnabled.collectAsState()
 
     var serviceOn by remember { mutableStateOf(SkipService.connected) }
     var showAddRule by remember { mutableStateOf(false) }
@@ -168,6 +172,7 @@ fun AppUi() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -184,7 +189,13 @@ fun AppUi() {
             color = MaterialTheme.colorScheme.outline,
         )
 
-        ServiceCard(serviceOn, master, onMaster = RuleRepository::setMaster) {
+        ServiceCard(
+            serviceOn,
+            master,
+            toastOn,
+            onMaster = RuleRepository::setMaster,
+            onToastToggle = RuleRepository::setToastEnabled,
+        ) {
             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
@@ -371,7 +382,9 @@ private fun RuleSubtitle(rule: Rule) {
 private fun ServiceCard(
     serviceOn: Boolean,
     master: Boolean,
+    toastOn: Boolean,
     onMaster: (Boolean) -> Unit,
+    onToastToggle: (Boolean) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     Card {
@@ -386,6 +399,17 @@ private fun ServiceCard(
                     )
                 }
                 Switch(checked = master, onCheckedChange = onMaster, enabled = serviceOn)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.toast_toggle), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.toast_toggle_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
+                Switch(checked = toastOn, onCheckedChange = onToastToggle, enabled = serviceOn)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -439,11 +463,14 @@ private fun ClickLogCard(entries: List<ClickLog.Entry>, apps: List<AppInfo>, onC
             }
             val labelMap = remember(apps) { apps.associate { it.packageName to it.label } }
             entries.take(8).forEach { entry ->
+                val typeLabel = entry.type.displayName()
                 Text(
                     buildString {
                         append(logTimeFormat.format(Date(entry.time)))
                         append(" · ")
                         append(labelMap[entry.packageName] ?: entry.packageName)
+                        append(" · ")
+                        append(typeLabel)
                         append(" · ")
                         append(entry.text)
                     },
@@ -460,7 +487,7 @@ private fun AddRuleDialog(apps: List<AppInfo>, prefill: Prefill?, onDismiss: () 
     var app by remember { mutableStateOf(prefill?.app) }
     var type by remember { mutableStateOf(RuleType.SPLASH) }
     var keywords by remember { mutableStateOf(prefill?.keywords ?: "") }
-    var viewId by remember { mutableStateOf("") }
+    var viewId by remember { mutableStateOf(prefill?.viewId ?: "") }
     var equalsMode by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
 
@@ -621,8 +648,10 @@ private fun CaptureResultDialog(
             TextButton(
                 enabled = selected.value.isNotEmpty(),
                 onClick = {
-                    val keywords = selected.value.sorted().mapNotNull { result.items.getOrNull(it)?.text }
-                    onUse(Prefill(app, keywords.joinToString(", ")))
+                    val chosen = selected.value.sorted().mapNotNull { result.items.getOrNull(it) }
+                    // 只勾一项且带控件ID时, 顺手把 viewId 也预填上
+                    val viewId = if (chosen.size == 1) chosen[0].viewId else null
+                    onUse(Prefill(app, chosen.joinToString(", ") { it.text }, viewId))
                 },
             ) { Text(stringResource(R.string.done)) }
         },

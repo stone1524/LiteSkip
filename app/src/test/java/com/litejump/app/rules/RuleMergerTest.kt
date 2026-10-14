@@ -31,7 +31,8 @@ class RuleMergerTest {
 
     @Test
     fun `renames colliding ids`() {
-        val incoming = listOf(rule("dup"), rule("dup"))
+        // 同 ID 但内容不同: 都保留, 且 ID 被改成互不相同的新 ID
+        val incoming = listOf(rule("dup"), rule("dup", keywords = listOf("关闭")))
         val merged = RuleMerger.merge(existing = emptyList(), incoming = incoming, takenIds = setOf("dup"))
         assertEquals(2, merged.size)
         assertTrue(merged[0].id != "dup")
@@ -40,10 +41,17 @@ class RuleMergerTest {
     }
 
     @Test
+    fun `skips content duplicates within one import batch`() {
+        val incoming = listOf(rule("dup"), rule("dup"))
+        val merged = RuleMerger.merge(existing = emptyList(), incoming = incoming, takenIds = setOf("dup"))
+        assertEquals(1, merged.size)
+    }
+
+    @Test
     fun `keeps unique ids untouched`() {
         val merged = RuleMerger.merge(
             existing = listOf(rule("existing")),
-            incoming = listOf(rule("fresh")),
+            incoming = listOf(rule("fresh", keywords = listOf("关闭"))),
             takenIds = setOf("existing", "builtin_x"),
         )
         assertEquals(listOf("fresh"), merged.map { it.id })
@@ -57,5 +65,15 @@ class RuleMergerTest {
             takenIds = emptySet(),
         )
         assertTrue(merged.isEmpty())
+    }
+
+    @Test
+    fun `skips content duplicates on import`() {
+        val merged = RuleMerger.merge(
+            existing = listOf(rule("already", keywords = listOf("同意"))),
+            incoming = listOf(rule("dup", keywords = listOf("同意")), rule("fresh", keywords = listOf("关闭"))),
+            takenIds = setOf("already"),
+        )
+        assertEquals(listOf("fresh"), merged.map { it.id })
     }
 }
