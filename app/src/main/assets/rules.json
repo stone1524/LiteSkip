@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "global": [
+    {
+      "id": "builtin_splash_global",
+      "type": "splash",
+      "label": "开屏广告·跳过按钮（全局）",
+      "keywords": ["跳过", "跳過", "Skip", "跳过广告"],
+      "matchMode": "contains"
+    }
+  ],
+  "apps": []
+}

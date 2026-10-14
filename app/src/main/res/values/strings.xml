@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">轻跳</string>
+    <string name="service_label">轻跳 · 自动跳过服务</string>
+    <string name="service_description">轻跳使用无障碍服务监测屏幕上的「跳过 / 同意 / 关闭」按钮并自动点击，帮你跳过开屏广告和弹窗。服务不读取你的输入内容；本应用无网络权限，不上传任何数据。</string>
+</resources>
