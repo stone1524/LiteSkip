@@ -134,7 +134,7 @@ app/src/main/java/com/litejump/app/
 ├── data/DataStore.kt       # 共享 DataStore
 └── ui/
     ├── AppUi.kt            # 设置界面(规则/日志/统计/备份/取词)
-    ├── Onboarding.kt       # 首次启动三步引导
+    ├── Onboarding.kt       # 分页新手引导(实时服务检测+保活指南)
     └── Theme.kt            # 深色主题 + dynamicColor
 ```
 

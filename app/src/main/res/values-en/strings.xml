@@ -76,12 +76,18 @@
     <string name="blacklist_dialog_hint">Excluded apps are not auto-skipped on splash screens</string>
 
     <string name="onboarding_title">Welcome to LiteSkip</string>
-    <string name="ob1_title">1. Enable the accessibility service</string>
-    <string name="ob1_body">Tap "Enable" on the home screen, turn on "LiteSkip · Auto Skip Service" in system settings and confirm. This is required for everything.</string>
-    <string name="ob2_title">2. Keep it alive</string>
-    <string name="ob2_body">On Xiaomi/HyperOS follow the keep-alive steps in the guide: autostart, unrestricted battery, lock the task card, accessibility shortcut.</string>
-    <string name="ob3_title">3. Add rules for uncovered popups</string>
-    <string name="ob3_body">"My rules → Screen picker" grabs button labels from the target screen; or add rules manually. Built-in rules cover the most common splash ads.</string>
+    <string name="ob_skip">Skip</string>
+    <string name="ob_next">Next</string>
+    <string name="ob_p1_title">Welcome to LiteSkip</string>
+    <string name="ob_p1_body">It stays in the background and taps "Skip / Agree / Close" buttons for you — splash ads, privacy dialogs and in-app popups. No Internet permission, nothing uploaded.</string>
+    <string name="ob_p2_title">Step 1 · Enable the accessibility service</string>
+    <string name="ob_p2_body">Required for everything. Tap below to jump to system settings, turn on "LiteSkip · Auto Skip Service", confirm the prompt — a check mark appears here when it is on.</string>
+    <string name="ob_p3_title">Step 2 · Keep it alive</string>
+    <string name="ob_p3_body">Chinese ROMs kill background services; without these settings skipping stops after a while. On Xiaomi / HyperOS follow four steps to stay resident.</string>
+    <string name="ob_open_guide">View the 4 keep-alive steps</string>
+    <string name="ob_keepalive_steps">1. Settings → Apps → LiteSkip → Autostart: on\n2. LiteSkip → Battery saver → No restrictions\n3. Recents: long-press LiteSkip card → Lock\n4. In accessibility settings enable the accessibility shortcut for quick re-enable after reboot</string>
+    <string name="ob_p4_title">Step 3 · Try one</string>
+    <string name="ob_p4_body">Open any app with a splash ad — "Splash ad skipped" means success. For uncovered popups, use "My rules → Screen picker" on the home screen to grab button labels and add a rule.</string>
     <string name="ob_done">Done, let\'s go</string>
 
     <string name="toast_service_on">LiteSkip service enabled</string>

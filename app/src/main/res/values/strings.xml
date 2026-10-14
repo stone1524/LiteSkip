@@ -76,12 +76,18 @@
     <string name="blacklist_dialog_hint">勾选后这些 App 不做全局开屏跳过</string>
 
     <string name="onboarding_title">欢迎使用轻跳</string>
-    <string name="ob1_title">① 开启无障碍服务</string>
-    <string name="ob1_body">首页点「去开启」，在系统设置里打开「轻跳 · 自动跳过服务」，弹窗选「允许」。这是全部功能的前提。</string>
-    <string name="ob2_title">② 设置后台保活</string>
-    <string name="ob2_body">小米 / 澎湃OS 用户按「使用指南」里的保活四步设置：自启动、省电策略无限制、任务卡加锁、无障碍快捷方式。</string>
-    <string name="ob3_title">③ 没覆盖到的弹窗自己加规则</string>
-    <string name="ob3_body">「我的规则 → 屏幕取词」能直接抓取目标界面的按钮文字生成规则；也可以手动添加。内置规则负责最常见的开屏广告。</string>
+    <string name="ob_skip">跳过</string>
+    <string name="ob_next">下一步</string>
+    <string name="ob_p1_title">欢迎来到轻跳</string>
+    <string name="ob_p1_body">它守在后台，帮你自动点击屏幕上的「跳过 / 同意 / 关闭」按钮——开屏广告、隐私弹窗、应用内弹窗都能应付。无网络权限，不上传任何数据。</string>
+    <string name="ob_p2_title">第一步：开启无障碍服务</string>
+    <string name="ob_p2_body">这是全部功能的前提。点下方按钮跳到系统设置，打开「轻跳 · 自动跳过服务」，风险提示选「允许」，回来这里会自动打勾。</string>
+    <string name="ob_p3_title">第二步：设置后台保活</string>
+    <string name="ob_p3_body">国产 ROM 会杀后台，不设置的话过一会儿就不跳了。小米 / 澎湃OS 按四步设置即可长期驻留。</string>
+    <string name="ob_open_guide">查看保活四步</string>
+    <string name="ob_keepalive_steps">① 设置 → 应用设置 → 应用管理 → 轻跳 → 自启动：开启\n② 应用管理 → 轻跳 → 省电策略 → 无限制\n③ 最近任务里长按轻跳卡片 → 锁定\n④ 无障碍设置页底部开启「无障碍快捷方式」，重启掉服务可快速重开</string>
+    <string name="ob_p4_title">第三步：试着跳一个</string>
+    <string name="ob_p4_body">打开任意带开屏广告的 App，看到「已跳过开屏广告」提示就成功了。遇到没覆盖的弹窗，回首页「我的规则 → 屏幕取词」抓按钮文字自己加一条。</string>
     <string name="ob_done">完成，开始使用</string>
 
     <string name="toast_service_on">轻跳服务已开启</string>
