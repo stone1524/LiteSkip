@@ -19,6 +19,12 @@ object CaptureScheduler {
 
     const val DEFAULT_SECONDS = 12
 
+    /** 用户提前回到 App 等场景下取消进行中的倒计时 */
+    fun cancel() {
+        job?.cancel()
+        job = null
+    }
+
     /** @return false 表示无障碍服务未连接, 无法取词 */
     fun start(service: SkipService?, seconds: Int = DEFAULT_SECONDS): Boolean {
         if (service == null) return false

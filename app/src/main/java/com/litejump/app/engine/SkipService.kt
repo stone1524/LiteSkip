@@ -37,9 +37,11 @@ class SkipService : AccessibilityService() {
         val connected: Boolean get() = instance != null
 
         private const val SCAN_DEBOUNCE_MS = 150L
+        private const val STATE_SCAN_DELAY_MS = 80L
         private const val CLICK_COOLDOWN_MS = 4000L
         private const val SPLASH_WINDOW_MS = 5000L
         private const val CONFIRM_HUNT_MS = 3500L
+        private const val MAP_PRUNE_THRESHOLD = 256
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -66,10 +68,27 @@ class SkipService : AccessibilityService() {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 windowShownAt[pkg] = SystemClock.elapsedRealtime()
                 event.className?.let { activityClass[pkg] = it.toString() }
-                handler.post { scan() }
+                // App 启动瞬间会连发一串窗口切换事件, 合并成一次扫描
+                scheduleScan(pkg, STATE_SCAN_DELAY_MS)
             }
 
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> scheduleScan(pkg, SCAN_DEBOUNCE_MS)
+        }
+    }
+
+    /**
+     * 三张长驻 Map 的上限清理: 服务可能数周不重启, 不清理会无限增长。
+     * 只在主线程(scan 的调用方)调用。
+     */
+    private fun pruneMaps() {
+        if (windowShownAt.size > MAP_PRUNE_THRESHOLD) {
+            val cutoff = SystemClock.elapsedRealtime() - 60_000
+            windowShownAt.entries.removeAll { it.value < cutoff }
+        }
+        if (activityClass.size > MAP_PRUNE_THRESHOLD) activityClass.clear()
+        if (lastClick.size > MAP_PRUNE_THRESHOLD) {
+            val cutoff = SystemClock.elapsedRealtime() - CLICK_COOLDOWN_MS
+            lastClick.entries.removeAll { it.value < cutoff }
         }
     }
 
@@ -85,6 +104,7 @@ class SkipService : AccessibilityService() {
     }
 
     private fun scan() {
+        pruneMaps()
         val snapshot = RuleRepository.snapshot()
         if (!snapshot.masterEnabled) return
         val now = SystemClock.elapsedRealtime()
@@ -148,9 +168,6 @@ class SkipService : AccessibilityService() {
                         huntPkg = pkg
                     }
                 }
-                // 冷却记录只留 60 秒, 防止 map 无限增长
-                val cutoff = SystemClock.elapsedRealtime() - 60_000
-                lastClick.entries.removeAll { it.value < cutoff }
             }
         }
     }
@@ -172,7 +189,7 @@ class SkipService : AccessibilityService() {
             toastPublic(getString(R.string.toast_capture_empty))
             return
         }
-        CaptureHub.pending = CaptureHub.Result(pkg, items.map { CaptureHub.Item(it.text, it.viewId) })
+        CaptureHub.publish(CaptureHub.Result(pkg, items.map { CaptureHub.Item(it.text, it.viewId) }))
         toastPublic(getString(R.string.toast_capture_done, items.size))
     }
 

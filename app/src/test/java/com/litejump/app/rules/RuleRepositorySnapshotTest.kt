@@ -19,7 +19,7 @@ class RuleRepositorySnapshotTest {
         builtinDisabled: Set<String> = emptySet(),
         splashBlacklist: Set<String> = emptySet(),
         customRules: List<Rule> = emptyList(),
-    ) = RuleRepository.Snapshot(
+    ) = EffectiveRules(
         masterEnabled = masterEnabled,
         builtinRules = builtin,
         builtinDisabled = builtinDisabled,

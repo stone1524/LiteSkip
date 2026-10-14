@@ -76,4 +76,34 @@ class RuleMergerTest {
         )
         assertEquals(listOf("fresh"), merged.map { it.id })
     }
+
+    @Test
+    fun `sanitize caps total rule count`() {
+        val many = (1..600).map { rule("r$it", keywords = listOf("k$it")) }
+        assertEquals(RuleMerger.MAX_RULES, RuleMerger.sanitize(many).size)
+    }
+
+    @Test
+    fun `sanitize caps keywords per rule and their length`() {
+        val keywords = (1..50).map { "词$it".repeat(10) } // 每个远超长度上限
+        val out = RuleMerger.sanitize(listOf(rule("r", keywords = keywords)))
+        assertEquals(1, out.size)
+        assertEquals(RuleMerger.MAX_KEYWORDS_PER_RULE, out[0].keywords.size)
+        assertTrue(out[0].keywords.all { it.length <= RuleMerger.MAX_KEYWORD_LENGTH })
+    }
+
+    @Test
+    fun `sanitize trims and dedups keywords, drops blanks`() {
+        val out = RuleMerger.sanitize(
+            listOf(rule("r", keywords = listOf(" 同意 ", "同意", "", "  ", "关闭"))),
+        )
+        assertEquals(listOf("同意", "关闭"), out[0].keywords)
+    }
+
+    @Test
+    fun `sanitize truncates overlong viewId`() {
+        val longId = "a".repeat(500)
+        val out = RuleMerger.sanitize(listOf(rule("r", keywords = emptyList(), viewId = longId)))
+        assertEquals(RuleMerger.MAX_VIEWID_LENGTH, out[0].viewId!!.length)
+    }
 }

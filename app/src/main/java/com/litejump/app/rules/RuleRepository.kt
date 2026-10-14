@@ -21,6 +21,9 @@ import kotlinx.serialization.json.Json
  */
 object RuleRepository {
 
+    /** 导入文件字符数上限 (1MB), 超出按无效处理 */
+    const val MAX_IMPORT_CHARS = 1_000_000
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -74,7 +77,7 @@ object RuleRepository {
     }.getOrElse { RuleFile() }
 
     /** 服务端每次扫描用的即时快照, 规则计算不做任何 IO */
-    fun snapshot(): Snapshot = Snapshot(
+    fun snapshot(): EffectiveRules = EffectiveRules(
         masterEnabled = _masterEnabled.value,
         builtinRules = _builtinRules.value,
         builtinDisabled = _builtinDisabled.value,
@@ -82,32 +85,6 @@ object RuleRepository {
         customRules = _customRules.value,
         toastEnabled = _toastEnabled.value,
     )
-
-    data class Snapshot(
-        val masterEnabled: Boolean,
-        val builtinRules: RuleFile,
-        val builtinDisabled: Set<String>,
-        val splashBlacklist: Set<String>,
-        val customRules: List<Rule>,
-        val toastEnabled: Boolean = true,
-    ) {
-        /** 给定包名当前生效的全部规则 */
-        fun rulesFor(packageName: String): List<Rule> {
-            if (!masterEnabled) return emptyList()
-            val all = (builtinRules.global + builtinRules.apps).filter { it.id !in builtinDisabled } +
-                customRules
-            return all.filter { rule ->
-                when (rule.type) {
-                    // SPLASH 与 CONFIRM 走同一套排除名单; 生效时机(窗口期/追猎期)由服务控制
-                    RuleType.SPLASH, RuleType.CONFIRM ->
-                        if (rule.packageName == null) packageName !in splashBlacklist
-                        else rule.packageName == packageName
-
-                    RuleType.CONSENT, RuleType.POPUP -> rule.packageName == packageName
-                }
-            }
-        }
-    }
 
     fun setMaster(enabled: Boolean) = scope.launch {
         appContext.appDataStore.edit { it[KEY_MASTER] = enabled }
@@ -159,6 +136,8 @@ object RuleRepository {
      * 2. 完整 RuleFile (取其 global + apps)
      */
     fun importJson(text: String): Int {
+        // 输入加固: 超大文件直接拒绝, 防止恶意/损坏文件撑爆内存
+        if (text.length > MAX_IMPORT_CHARS) return 0
         val incoming: List<Rule> = decodeRules(text) ?: runCatching {
             val file = json.decodeFromString<RuleFile>(text)
             file.global + file.apps

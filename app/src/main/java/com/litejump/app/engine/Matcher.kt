@@ -33,6 +33,7 @@ object Matcher {
 
         val queue = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
         queue.add(root to 0)
+        val bounds = Rect()
         while (queue.isNotEmpty() && visited < MAX_NODES) {
             val (node, depth) = queue.removeFirst()
             visited++
@@ -45,8 +46,9 @@ object Matcher {
                     rule.keywords.isEmpty() -> rule.viewId ?: continue
                     else -> continue
                 }
-                if (isActionable(node)) {
-                    targets += Target(node, rule, matchedText, Rect().also(node::getBoundsInScreen))
+                node.getBoundsInScreen(bounds)
+                if (isActionable(node, bounds)) {
+                    targets += Target(node, rule, matchedText, Rect(bounds))
                     break // 同一节点只按第一条命中的规则处理
                 }
             }
@@ -98,9 +100,8 @@ object Matcher {
     }
 
     /** 可见、有实际大小, 且自身或两层以内父节点可点击 —— 三者都满足才允许自动点击 */
-    private fun isActionable(node: AccessibilityNodeInfo): Boolean {
+    private fun isActionable(node: AccessibilityNodeInfo, bounds: Rect): Boolean {
         if (!node.isVisibleToUser) return false
-        val bounds = Rect().also(node::getBoundsInScreen)
         if (bounds.isEmpty || bounds.width() <= 0 || bounds.height() <= 0) return false
         return hasClickable(node, maxHops = 2)
     }

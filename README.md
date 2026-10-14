@@ -103,6 +103,15 @@ keytool -genkeypair -v -keystore keystore/litejump-release.jks \
 
 导入功能兼容两种格式：本应用导出的规则数组，或上面的完整结构。
 
+## 安全与隐私设计
+
+- **无网络权限**：Manifest 未申请 `INTERNET`，系统层面杜绝数据外传——可在「设置 → 应用 → 轻跳 → 权限管理」亲自验证
+- **数据只存本机**：规则/日志/统计全部在应用私有目录（DataStore）；`allowBackup=false`，adb 备份与云迁移都带不走
+- **屏幕内容瞬时处理**：无障碍节点树只在内存中匹配即弃；取词结果（屏幕文字）超过 10 分钟未消费自动销毁，点击日志仅存按钮文字本身且最多 50 条，随时可清空
+- **导入输入加固**：规则文件超过 1MB 拒绝解析；单条规则关键词 ≤ 20 个、单个 ≤ 40 字符、viewId ≤ 200 字符、总量 ≤ 500 条，恶意/损坏文件无法拖慢扫描引擎
+- **导出组件最小化**：仅启动器 Activity 与两个系统绑定的服务（无障碍/磁贴），均需系统级权限才能调用
+- **Release 开启 R8**：代码收缩混淆，减小攻击面
+
 ## 生效时机（防误点设计）
 
 | 规则类型 | 何时响应 |
@@ -128,12 +137,16 @@ app/src/main/java/com/litejump/app/
 │   └── Stats.kt            # 累计/今日/估算省时
 ├── rules/
 │   ├── Models.kt           # 规则数据模型(kotlinx.serialization)
+│   ├── EffectiveRules.kt   # 生效规则快照(引擎只消费它, 有单测)
 │   ├── TextMatcher.kt      # 纯文本匹配(有单测)
-│   ├── RuleMerger.kt       # 导入合并纯逻辑(有单测)
+│   ├── RuleMerger.kt       # 导入加固+合并纯逻辑(有单测)
 │   └── RuleRepository.kt   # 内置+自定义规则合并, DataStore 持久化, 导入导出
 ├── data/DataStore.kt       # 共享 DataStore
 └── ui/
-    ├── AppUi.kt            # 设置界面(规则/日志/统计/备份/取词)
+    ├── AppUi.kt            # 主屏(状态组装)
+    ├── Common.kt           # AppInfo/预填/共享工具
+    ├── Cards.kt            # 服务/统计/日志卡片
+    ├── RuleDialogs.kt      # 添加规则/选应用/取词结果弹窗
     ├── Onboarding.kt       # 分页新手引导(实时服务检测+保活指南)
     └── Theme.kt            # 深色主题 + dynamicColor
 ```
